@@ -1,8 +1,8 @@
 import sys
 import threading
 import webbrowser
-import winsound
-from winsound import *
+import playsound
+from playsound import playsound
 from PyQt5 import QtGui
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QFont, QFontDatabase, QTextCursor, QPainter, QPixmap, QIcon
@@ -598,7 +598,7 @@ class Main(QMainWindow):
 
     @staticmethod
     def playSound():
-        threading.Thread(target=lambda: winsound.PlaySound("./click.wav", SND_ASYNC)).start()
+        threading.Thread(target=lambda: playsound("./click.wav", SND_ASYNC)).start()
 
     def init_palette(self):
         palette = QtGui.QPalette()
