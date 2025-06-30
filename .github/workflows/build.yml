@@ -164,9 +164,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller pillow packaging
           pip install -r requirements.macos.txt
-          pip install pygame --no-binary :all: \
-            --global-option="build_ext" \
-            --global-option="--plat-name=universal2"          
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
@@ -176,6 +173,11 @@ jobs:
           # 将GitHub Actions的架构名称映射到PyInstaller的架构名称
           if [ "${{ matrix.arch }}" = "x64" ]; then
             PYI_ARCH="x86_64"
+            arch -x86_64 /bin/bash -c "
+            # 确保 pip 安装的是 x86_64 版本
+            pip install --upgrade pip
+            pip install pygame --only-binary=:all: --platform=macosx_10_13_x86_64
+          "
           else
             PYI_ARCH="${{ matrix.arch }}"
           fi
