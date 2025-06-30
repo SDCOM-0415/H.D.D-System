@@ -1,0 +1,17 @@
+$:
+  push:
+    - runner:
+        cpus: 1
+      imports: https://cnb.cool/BlueScreen-Studio/Tech/secrets/-/blob/sdcom/github.yml
+      stages:
+        - name: sync to github
+          image: tencentcom/git-sync
+          settings:
+            target_url: https://github.com/SDCOM-0415/H.D.D-System.git
+            auth_type: https
+            username: ${GIT_USERNAME}
+            password: ${GIT_ACCESS_TOKEN}
+            git_user: ${GIT_USERNAME}
+            git_email: ${GIT_EMAIL}
+            force: true
+            branch: main
