@@ -33,7 +33,51 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --name="HDD-System" --windowed --icon=Icon.ico --add-data="*.png;." --add-data="*.mp3;." --add-data="*.wav;." --add-data="*.ttf;." --add-data="Icon.ico;." Main.PY
+          # 创建一个临时的spec文件
+          echo "# -*- mode: python ; coding: utf-8 -*-" > hdd_system.spec
+          echo "block_cipher = None" >> hdd_system.spec
+          echo "a = Analysis(['Main.PY']," >> hdd_system.spec
+          echo "             pathex=['${{ github.workspace }}']," >> hdd_system.spec
+          echo "             binaries=[]," >> hdd_system.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.')]," >> hdd_system.spec
+          echo "             hiddenimports=[]," >> hdd_system.spec
+          echo "             hookspath=[]," >> hdd_system.spec
+          echo "             runtime_hooks=[]," >> hdd_system.spec
+          echo "             excludes=[]," >> hdd_system.spec
+          echo "             win_no_prefer_redirects=False," >> hdd_system.spec
+          echo "             win_private_assemblies=False," >> hdd_system.spec
+          echo "             cipher=block_cipher," >> hdd_system.spec
+          echo "             noarchive=False)" >> hdd_system.spec
+          echo "pyz = PYZ(a.pure, a.zipped_data," >> hdd_system.spec
+          echo "             cipher=block_cipher)" >> hdd_system.spec
+          echo "exe = EXE(pyz," >> hdd_system.spec
+          echo "          a.scripts," >> hdd_system.spec
+          echo "          []," >> hdd_system.spec
+          echo "          exclude_binaries=True," >> hdd_system.spec
+          echo "          name='HDD-System'," >> hdd_system.spec
+          echo "          debug=False," >> hdd_system.spec
+          echo "          bootloader_ignore_signals=False," >> hdd_system.spec
+          echo "          strip=False," >> hdd_system.spec
+          echo "          upx=True," >> hdd_system.spec
+          echo "          console=False," >> hdd_system.spec
+          echo "          disable_windowed_traceback=False," >> hdd_system.spec
+          echo "          target_arch=None," >> hdd_system.spec
+          echo "          codesign_identity=None," >> hdd_system.spec
+          echo "          entitlements_file=None," >> hdd_system.spec
+          echo "          icon='Icon.ico')" >> hdd_system.spec
+          echo "coll = COLLECT(exe," >> hdd_system.spec
+          echo "               a.binaries," >> hdd_system.spec
+          echo "               a.zipfiles," >> hdd_system.spec
+          echo "               a.datas," >> hdd_system.spec
+          echo "               strip=False," >> hdd_system.spec
+          echo "               upx=True," >> hdd_system.spec
+          echo "               upx_exclude=[]," >> hdd_system.spec
+          echo "               name='HDD-System')" >> hdd_system.spec
+          
+          # 使用spec文件构建
+          pyinstaller hdd_system.spec
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       # 创建zip文件以便上传
       - name: Create ZIP archive
@@ -50,6 +94,8 @@ jobs:
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     runs-on: macos-latest
@@ -74,20 +120,84 @@ jobs:
 
       - name: Build with PyInstaller
         run: |
-          pyinstaller --name="HDD-System" --windowed --icon=Icon.ico --add-data="*.png:." --add-data="*.mp3:." --add-data="*.wav:." --add-data="*.ttf:." --add-data="Icon.ico:." Main.PY
+          # 创建一个临时的spec文件
+          echo "# -*- mode: python ; coding: utf-8 -*-" > hdd_system_mac.spec
+          echo "block_cipher = None" >> hdd_system_mac.spec
+          echo "a = Analysis(['Main.PY']," >> hdd_system_mac.spec
+          echo "             pathex=['${{ github.workspace }}']," >> hdd_system_mac.spec
+          echo "             binaries=[]," >> hdd_system_mac.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.')]," >> hdd_system_mac.spec
+          echo "             hiddenimports=[]," >> hdd_system_mac.spec
+          echo "             hookspath=[]," >> hdd_system_mac.spec
+          echo "             runtime_hooks=[]," >> hdd_system_mac.spec
+          echo "             excludes=[]," >> hdd_system_mac.spec
+          echo "             win_no_prefer_redirects=False," >> hdd_system_mac.spec
+          echo "             win_private_assemblies=False," >> hdd_system_mac.spec
+          echo "             cipher=block_cipher," >> hdd_system_mac.spec
+          echo "             noarchive=False)" >> hdd_system_mac.spec
+          echo "pyz = PYZ(a.pure, a.zipped_data," >> hdd_system_mac.spec
+          echo "             cipher=block_cipher)" >> hdd_system_mac.spec
+          echo "exe = EXE(pyz," >> hdd_system_mac.spec
+          echo "          a.scripts," >> hdd_system_mac.spec
+          echo "          []," >> hdd_system_mac.spec
+          echo "          exclude_binaries=True," >> hdd_system_mac.spec
+          echo "          name='HDD-System'," >> hdd_system_mac.spec
+          echo "          debug=False," >> hdd_system_mac.spec
+          echo "          bootloader_ignore_signals=False," >> hdd_system_mac.spec
+          echo "          strip=False," >> hdd_system_mac.spec
+          echo "          upx=True," >> hdd_system_mac.spec
+          echo "          console=False," >> hdd_system_mac.spec
+          echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
+          echo "          target_arch=None," >> hdd_system_mac.spec
+          echo "          codesign_identity=None," >> hdd_system_mac.spec
+          echo "          entitlements_file=None," >> hdd_system_mac.spec
+          echo "          icon='Icon.ico')" >> hdd_system_mac.spec
+          echo "coll = COLLECT(exe," >> hdd_system_mac.spec
+          echo "               a.binaries," >> hdd_system_mac.spec
+          echo "               a.zipfiles," >> hdd_system_mac.spec
+          echo "               a.datas," >> hdd_system_mac.spec
+          echo "               strip=False," >> hdd_system_mac.spec
+          echo "               upx=True," >> hdd_system_mac.spec
+          echo "               upx_exclude=[]," >> hdd_system_mac.spec
+          echo "               name='HDD-System')" >> hdd_system_mac.spec
+          echo "app = BUNDLE(coll," >> hdd_system_mac.spec
+          echo "             name='HDD-System.app'," >> hdd_system_mac.spec
+          echo "             icon='Icon.ico'," >> hdd_system_mac.spec
+          echo "             bundle_identifier=None," >> hdd_system_mac.spec
+          echo "             info_plist={" >> hdd_system_mac.spec
+          echo "                'NSHighResolutionCapable': 'True'," >> hdd_system_mac.spec
+          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> hdd_system_mac.spec
+          echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
+          echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_mac.spec
+          echo "                'CFBundleName': 'HDD-System'," >> hdd_system_mac.spec
+          echo "             })" >> hdd_system_mac.spec
+          
+          # 使用spec文件构建
+          pyinstaller hdd_system_mac.spec
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Create DMG (macOS disk image)
         run: |
           # 安装create-dmg工具
           brew install create-dmg
           
+          # 检查dist目录和.app文件是否存在
+          echo "检查构建产物..."
+          ls -la dist/
+          
           # 创建临时目录
           mkdir -p dmg_contents
           
           # 复制.app到临时目录
-          cp -r dist/HDD-System.app dmg_contents/
+          echo "复制.app到临时目录..."
+          cp -r dist/HDD-System.app dmg_contents/ || { echo "复制.app失败"; exit 1; }
+          
+          # 检查.app是否成功复制
+          ls -la dmg_contents/
           
           # 创建DMG文件
+          echo "创建DMG文件..."
           create-dmg \
             --volname "HDD-System" \
             --volicon "Icon.ico" \
@@ -96,7 +206,11 @@ jobs:
             --icon "HDD-System.app" 150 190 \
             --app-drop-link 450 190 \
             "HDD-System.dmg" \
-            "dmg_contents/"
+            "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
+          
+          # 检查DMG文件是否创建成功
+          echo "检查DMG文件..."
+          ls -la HDD-System.dmg
 
       # 上传macOS DMG到Release
       - name: Upload macOS DMG Release Asset
@@ -107,3 +221,5 @@ jobs:
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
