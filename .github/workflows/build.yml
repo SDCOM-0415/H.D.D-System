@@ -1,4 +1,4 @@
-name: Build Application
+ou jianname: Build Application
 
 on:
   push:
@@ -149,11 +149,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pillow
-          pip install -r requirements.macos.txt
           
-          # 确保安装了支持Universal Binary的依赖
+          # 显示Python和pip的架构信息
+          python -c "import platform; print('Python架构:', platform.machine())"
+          
+          # 安装依赖项并指定目标架构
+          ARCHFLAGS="-arch arm64" pip install pyinstaller pillow
+          ARCHFLAGS="-arch arm64" pip install -r requirements.macos.txt
+          
+          # 安装其他必要的包
           pip install packaging
+          
+          # 验证关键依赖项的架构
+          echo "检查pygame安装..."
+          python -c "import pygame; print('Pygame版本:', pygame.version.ver)"
+          file $(python -c "import pygame; print(pygame.__file__)")
           
           # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
@@ -190,7 +200,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch='universal2'," >> hdd_system_mac.spec
+          echo "          target_arch='arm64'," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -216,12 +226,18 @@ jobs:
           echo "             })" >> hdd_system_mac.spec
           
           # 使用spec文件构建
+          # 修改target_arch为arm64
+          echo "修改spec文件中的target_arch..."
+          sed -i '' "s/target_arch='universal2'/target_arch='arm64'/g" hdd_system_mac.spec
+          echo "验证修改结果..."
+          grep "target_arch" hdd_system_mac.spec
+          echo "开始构建..."
           pyinstaller hdd_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Verify Universal Binary
+      - name: Verify Binary Architecture
         run: |
           echo "检查应用程序架构支持..."
           lipo -archs "dist/HDD-System.app/Contents/MacOS/HDD-System" || true
@@ -231,6 +247,9 @@ jobs:
           
           echo "显示详细文件信息..."
           file "dist/HDD-System.app/Contents/MacOS/HDD-System"
+          
+          echo "确认是否为arm64架构..."
+          otool -l "dist/HDD-System.app/Contents/MacOS/HDD-System" | grep -A 4 LC_BUILD_VERSION || true
 
       - name: Create DMG (macOS disk image)
         run: |
