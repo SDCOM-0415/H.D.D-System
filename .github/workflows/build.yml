@@ -82,7 +82,7 @@ jobs:
           echo "          a.scripts," >> hdd_system.spec
           echo "          []," >> hdd_system.spec
           echo "          exclude_binaries=True," >> hdd_system.spec
-          echo "          name='HDD-System'," >> hdd_system.spec
+          echo "          name='H.D.D-System'," >> hdd_system.spec
           echo "          debug=False," >> hdd_system.spec
           echo "          bootloader_ignore_signals=False," >> hdd_system.spec
           echo "          strip=False," >> hdd_system.spec
@@ -162,11 +162,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 强制安装universal2版本的pygame
-          pip install pygame --prefer-binary --no-cache-dir --force-reinstall
           pip install pyinstaller pillow packaging
           pip install -r requirements.macos.txt
-          
+          pip install pygame --no-binary :all: \
+            --global-option="build_ext" \
+            --global-option="--plat-name=universal2"          
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
@@ -200,7 +200,7 @@ jobs:
           echo "          a.scripts," >> hdd_system_$PYI_ARCH.spec
           echo "          []," >> hdd_system_$PYI_ARCH.spec
           echo "          exclude_binaries=True," >> hdd_system_$PYI_ARCH.spec
-          echo "          name='HDD-System'," >> hdd_system_$PYI_ARCH.spec
+          echo "          name='H.D.D-System'," >> hdd_system_$PYI_ARCH.spec
           echo "          debug=False," >> hdd_system_$PYI_ARCH.spec
           echo "          bootloader_ignore_signals=False," >> hdd_system_$PYI_ARCH.spec
           echo "          strip=False," >> hdd_system_$PYI_ARCH.spec
