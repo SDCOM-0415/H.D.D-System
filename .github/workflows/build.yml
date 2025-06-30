@@ -131,15 +131,6 @@ jobs:
           cd dist
           7z a -tzip "../HDD-System-Windows-x64.zip" HDD-System/
           cd ..
-          Remove-Item -Recurse -Force dist, build
-          
-          # ARM64
-          echo "Building for ARM64..."
-          (Get-Content hdd_system.spec) -replace 'target_arch=None', 'target_arch="arm64"' | Set-Content hdd_system_arm64.spec
-          pyinstaller hdd_system_arm64.spec
-          cd dist
-          7z a -tzip "../HDD-System-Windows-arm64.zip" HDD-System/
-          cd ..
 
       # 上传到Release
       - name: Upload Windows Release Assets
@@ -148,7 +139,6 @@ jobs:
           files: |
             ./HDD-System-Windows-x86.zip
             ./HDD-System-Windows-x64.zip
-            ./HDD-System-Windows-arm64.zip
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
@@ -181,9 +171,9 @@ jobs:
           python -c "import platform; print('Python架构:', platform.machine())"
           
           # 安装依赖项并指定目标架构
-          echo "安装arm64架构依赖..."
-          ARCHFLAGS="-arch arm64" pip install pyinstaller pillow
-          ARCHFLAGS="-arch arm64" pip install -r requirements.macos.txt
+          echo "安装x86_64架构依赖..."
+          ARCHFLAGS="-arch x86_64" pip install pyinstaller pillow
+          ARCHFLAGS="-arch x86_64" pip install -r requirements.macos.txt
           
           # 安装其他必要的包
           pip install packaging create-dmg
@@ -228,7 +218,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch='arm64'," >> hdd_system_mac.spec
+          echo "          target_arch='x86_64'," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -276,60 +266,20 @@ jobs:
           echo "确认是否为arm64架构..."
           otool -l "dist/HDD-System.app/Contents/MacOS/HDD-System" | grep -A 4 LC_BUILD_VERSION || true
 
-      # 为不同架构构建
-      - name: Build for different architectures
+      # 创建DMG安装包
+      - name: Create DMG Package
         run: |
           # 安装create-dmg工具（如果尚未安装）
           brew install create-dmg || true
           
-          # 当前已经构建了arm64版本，保存它
-          echo "保存arm64构建..."
-          mkdir -p arm64_build
-          cp -r dist/* arm64_build/
-          
-          # 验证arm64构建
-          echo "验证arm64构建架构..."
-          file arm64_build/HDD-System.app/Contents/MacOS/HDD-System
-          
-          # 创建arm64版本的DMG
-          echo "创建arm64版本的DMG..."
-          mkdir -p dmg_contents_arm64
-          cp -r arm64_build/HDD-System.app dmg_contents_arm64/ || { echo "复制arm64 .app失败"; exit 1; }
-          create-dmg \
-            --volname "HDD-System" \
-            --volicon "Icon.icns" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon "HDD-System.app" 150 190 \
-            --app-drop-link 450 190 \
-            "HDD-System-macOS-arm64.dmg" \
-            "dmg_contents_arm64/" || { echo "创建arm64 DMG失败"; exit 1; }
-          
-          # 清理并为x86_64构建
-          echo "清理并为x86_64构建..."
-          rm -rf dist build
-          
-          # 修改spec文件为x86_64架构
-          echo "修改spec文件为x86_64架构..."
-          sed -i '' "s/target_arch='arm64'/target_arch='x86_64'/g" hdd_system_mac.spec
-          
-          # 重新安装依赖项，指定x86_64架构
-          echo "重新安装依赖项，指定x86_64架构..."
-          ARCHFLAGS="-arch x86_64" pip install pyinstaller
-          ARCHFLAGS="-arch x86_64" pip install -r requirements.macos.txt
-          
-          # 构建x86_64版本
-          echo "构建x86_64版本..."
-          pyinstaller hdd_system_mac.spec
-          
-          # 验证x86_64构建
+          # 验证构建架构
           echo "验证x86_64构建架构..."
           file dist/HDD-System.app/Contents/MacOS/HDD-System
           
           # 创建x86_64版本的DMG
           echo "创建x86_64版本的DMG..."
-          mkdir -p dmg_contents_x86_64
-          cp -r dist/HDD-System.app dmg_contents_x86_64/ || { echo "复制x86_64 .app失败"; exit 1; }
+          mkdir -p dmg_contents
+          cp -r dist/HDD-System.app dmg_contents/ || { echo "复制x86_64 .app失败"; exit 1; }
           create-dmg \
             --volname "HDD-System" \
             --volicon "Icon.icns" \
@@ -338,7 +288,7 @@ jobs:
             --icon "HDD-System.app" 150 190 \
             --app-drop-link 450 190 \
             "HDD-System-macOS-x86_64.dmg" \
-            "dmg_contents_x86_64/" || { echo "创建x86_64 DMG失败"; exit 1; }
+            "dmg_contents/" || { echo "创建x86_64 DMG失败"; exit 1; }
           
           # 检查DMG文件是否创建成功
           echo "检查DMG文件..."
@@ -349,7 +299,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./HDD-System-macOS-arm64.dmg
             ./HDD-System-macOS-x86_64.dmg
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
