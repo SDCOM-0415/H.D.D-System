@@ -9,9 +9,9 @@ $:
           settings:
             target_url: https://github.com/huohuocn/good-zzz.git
             auth_type: https
-            username: ${GIT_USERNAME}
-            password: ${GIT_ACCESS_TOKEN}
-            git_user: ${GIT_USERNAME}
-            git_email: ${GIT_EMAIL}
+            username: ${GIT_HUOUSERNAME}
+            password: ${GIT_HUOACCESS_TOKEN}
+            git_user: ${GIT_HUOUSERNAME}
+            git_email: sdcom@sdcom.asia
             force: true
             branch: main
