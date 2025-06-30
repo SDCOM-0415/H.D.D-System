@@ -7,7 +7,7 @@ $:
         - name: sync to github
           image: tencentcom/git-sync
           settings:
-            target_url: https://github.com/SDCOM-0415/H.D.D-System.git
+            target_url: https://github.com/huohuocn/good-zzz.git
             auth_type: https
             username: ${GIT_USERNAME}
             password: ${GIT_ACCESS_TOKEN}
