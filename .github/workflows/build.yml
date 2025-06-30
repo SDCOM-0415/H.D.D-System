@@ -87,7 +87,7 @@ jobs:
 
       # 如果是tag推送，则上传到Release
       - name: Upload Windows Release Asset
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         with:
           files: ./dist/HDD-System-Windows.zip
@@ -115,8 +115,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller
+          pip install pyinstaller pillow
           pip install -r requirements.macos.txt
+          
+          # 使用Pillow将.ico转换为.icns
+          mkdir -p icon.iconset
+          python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
+          iconutil -c icns icon.iconset -o Icon.icns
 
       - name: Build with PyInstaller
         run: |
@@ -126,7 +131,7 @@ jobs:
           echo "a = Analysis(['Main.PY']," >> hdd_system_mac.spec
           echo "             pathex=['${{ github.workspace }}']," >> hdd_system_mac.spec
           echo "             binaries=[]," >> hdd_system_mac.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.')]," >> hdd_system_mac.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> hdd_system_mac.spec
           echo "             hiddenimports=[]," >> hdd_system_mac.spec
           echo "             hookspath=[]," >> hdd_system_mac.spec
           echo "             runtime_hooks=[]," >> hdd_system_mac.spec
@@ -151,7 +156,7 @@ jobs:
           echo "          target_arch=None," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
-          echo "          icon='Icon.ico')" >> hdd_system_mac.spec
+          echo "          icon='Icon.icns')" >> hdd_system_mac.spec
           echo "coll = COLLECT(exe," >> hdd_system_mac.spec
           echo "               a.binaries," >> hdd_system_mac.spec
           echo "               a.zipfiles," >> hdd_system_mac.spec
@@ -162,7 +167,7 @@ jobs:
           echo "               name='HDD-System')" >> hdd_system_mac.spec
           echo "app = BUNDLE(coll," >> hdd_system_mac.spec
           echo "             name='HDD-System.app'," >> hdd_system_mac.spec
-          echo "             icon='Icon.ico'," >> hdd_system_mac.spec
+          echo "             icon='Icon.icns'," >> hdd_system_mac.spec
           echo "             bundle_identifier=None," >> hdd_system_mac.spec
           echo "             info_plist={" >> hdd_system_mac.spec
           echo "                'NSHighResolutionCapable': 'True'," >> hdd_system_mac.spec
@@ -200,7 +205,7 @@ jobs:
           echo "创建DMG文件..."
           create-dmg \
             --volname "HDD-System" \
-            --volicon "Icon.ico" \
+            --volicon "Icon.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
             --icon "HDD-System.app" 150 190 \
@@ -214,7 +219,7 @@ jobs:
 
       # 上传macOS DMG到Release
       - name: Upload macOS DMG Release Asset
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         with:
           files: ./HDD-System.dmg
