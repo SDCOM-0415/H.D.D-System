@@ -103,7 +103,7 @@ jobs:
           
           # 检查构建产物
           echo "构建产物列表:"
-          ls -la dist/
+          Get-ChildItem dist -Force
         env:
           PYTHONPATH: ${{ github.workspace }}
           
