@@ -23,6 +23,7 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
+          cache-dependency-path: requirements.windows.txt
 
       - name: Install dependencies
         run: |
@@ -63,6 +64,7 @@ jobs:
         with:
           python-version: '3.9'
           cache: 'pip'
+          cache-dependency-path: requirements.macos.txt
 
       - name: Install dependencies
         run: |
