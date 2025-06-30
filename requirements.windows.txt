@@ -4,4 +4,4 @@ psutil
 pygame
 pywinstyles
 pywin32
-qfluentwidgets
+pip install PyQt-Fluent-Widgets
