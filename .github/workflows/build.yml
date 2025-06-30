@@ -111,34 +111,17 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
 
-      # 为不同架构构建
-      - name: Build for different architectures
+      # 创建zip文件以便上传
+      - name: Create ZIP archive
         run: |
-          # x86 (32-bit)
-          echo "Building for x86..."
-          $env:PYTHONPATH = "${{ github.workspace }}"
-          (Get-Content hdd_system.spec) -replace 'target_arch=None', 'target_arch="x86"' | Set-Content hdd_system_x86.spec
-          pyinstaller hdd_system_x86.spec
           cd dist
-          7z a -tzip "../HDD-System-Windows-x86.zip" HDD-System/
-          cd ..
-          Remove-Item -Recurse -Force dist, build
-          
-          # x64 (64-bit)
-          echo "Building for x64..."
-          (Get-Content hdd_system.spec) -replace 'target_arch=None', 'target_arch="x64"' | Set-Content hdd_system_x64.spec
-          pyinstaller hdd_system_x64.spec
-          cd dist
-          7z a -tzip "../HDD-System-Windows-x64.zip" HDD-System/
-          cd ..
+          7z a -tzip HDD-System-Windows.zip HDD-System/
 
       # 上传到Release
-      - name: Upload Windows Release Assets
+      - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            ./HDD-System-Windows-x86.zip
-            ./HDD-System-Windows-x64.zip
+          files: ./dist/HDD-System-Windows.zip
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
@@ -147,7 +130,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
-    runs-on: macos-14-xl
+    runs-on: macos-latest
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     permissions:
@@ -156,51 +139,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install x86_64 gettext
-        run: |
-          # 切换到x86_64架构的Homebrew
-          arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          # 安装x86_64架构的gettext
-          arch -x86_64 brew install gettext
-          echo "GETTEXT_PATH=$(arch -x86_64 brew --prefix gettext)" >> $GITHUB_ENV
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-          architecture: 'x64'
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
-        env:
-          DYLD_LIBRARY_PATH: ${{ env.GETTEXT_PATH }}/lib
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install pyinstaller pillow
+          pip install -r requirements.macos.txt
           
-          # 显示Python和pip的架构信息
-          python -c "import platform; print('Python架构:', platform.machine())"
-          
-          # 设置x86_64架构
-          export ARCHFLAGS="-arch x86_64"
-          export SYSTEM_VERSION_COMPAT=1
-          
-          # 强制使用x86_64架构
-          echo "强制使用x86_64架构..."
-          arch -x86_64 python -c "import platform; print('强制后Python架构:', platform.machine())"
-      
-          # 安装依赖项并指定目标架构
-              echo "安装x86_64架构依赖..."
-              arch -x86_64 pip install pyinstaller pillow
-              arch -x86_64 pip install -r requirements.macos.txt
-
-              # 安装其他必要的包
-              arch -x86_64 pip install packaging
-          
-          # 验证关键依赖项的架构
-          echo "检查pygame安装..."
-          python -c "import pygame; print('Pygame版本:', pygame.version.ver)"
-          file $(python -c "import pygame; print(pygame.__file__)")
+          # 确保安装了支持Universal Binary的依赖
+          pip install packaging
           
           # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
@@ -259,19 +212,16 @@ jobs:
           echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
           echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_mac.spec
           echo "                'CFBundleName': 'HDD-System'," >> hdd_system_mac.spec
-          echo "                'LSMinimumSystemVersion': '11.0'," >> hdd_system_mac.spec
+          echo "             cipher=block_cipher)" >> hdd_system_mac.spec
           echo "             })" >> hdd_system_mac.spec
           
           # 使用spec文件构建
-          echo "验证spec文件中的target_arch设置..."
-          grep "target_arch" hdd_system_mac.spec
-          echo "开始构建..."
           pyinstaller hdd_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Verify Binary Architecture
+      - name: Verify Universal Binary
         run: |
           echo "检查应用程序架构支持..."
           lipo -archs "dist/HDD-System.app/Contents/MacOS/HDD-System" || true
@@ -281,24 +231,28 @@ jobs:
           
           echo "显示详细文件信息..."
           file "dist/HDD-System.app/Contents/MacOS/HDD-System"
-          
-          echo "确认是否为arm64架构..."
-          otool -l "dist/HDD-System.app/Contents/MacOS/HDD-System" | grep -A 4 LC_BUILD_VERSION || true
 
-      # 创建DMG安装包
-      - name: Create DMG Package
+      - name: Create DMG (macOS disk image)
         run: |
-          # 安装create-dmg工具（如果尚未安装）
-          brew install create-dmg || true
+          # 安装create-dmg工具
+          brew install create-dmg
           
-          # 验证构建架构
-          echo "验证x86_64构建架构..."
-          file dist/HDD-System.app/Contents/MacOS/HDD-System
+          # 检查dist目录和.app文件是否存在
+          echo "检查构建产物..."
+          ls -la dist/
           
-          # 创建x86_64版本的DMG
-          echo "创建x86_64版本的DMG..."
+          # 创建临时目录
           mkdir -p dmg_contents
-          cp -r dist/HDD-System.app dmg_contents/ || { echo "复制x86_64 .app失败"; exit 1; }
+          
+          # 复制.app到临时目录
+          echo "复制.app到临时目录..."
+          cp -r dist/HDD-System.app dmg_contents/ || { echo "复制.app失败"; exit 1; }
+          
+          # 检查.app是否成功复制
+          ls -la dmg_contents/
+          
+          # 创建DMG文件
+          echo "创建DMG文件..."
           create-dmg \
             --volname "HDD-System" \
             --volicon "Icon.icns" \
@@ -306,12 +260,12 @@ jobs:
             --window-size 600 400 \
             --icon "HDD-System.app" 150 190 \
             --app-drop-link 450 190 \
-            "HDD-System-macOS-x86_64.dmg" \
-            "dmg_contents/" || { echo "创建x86_64 DMG失败"; exit 1; }
+            "HDD-System.dmg" \
+            "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
           
           # 检查DMG文件是否创建成功
           echo "检查DMG文件..."
-          ls -la *.dmg
+          ls -la HDD-System.dmg
 
       # 上传macOS DMG到Release
       - name: Upload macOS DMG Release Assets
