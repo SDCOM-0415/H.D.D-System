@@ -138,10 +138,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install system dependencies
-        run: brew install gettext
+      - name: Install and link system dependencies
+        run: |
+          brew install gettext
+          brew link --force gettext
+          echo "GETTEXT_PATH=$(brew --prefix gettext)" >> $GITHUB_ENV
 
       - name: Set up Python
+        env:
+          DYLD_LIBRARY_PATH: ${{ env.GETTEXT_PATH }}/lib
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
