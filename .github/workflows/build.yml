@@ -1,4 +1,4 @@
-ou jianname: Build Application
+name: Build Application
 
 on:
   push:
