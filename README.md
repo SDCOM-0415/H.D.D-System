@@ -2,7 +2,7 @@
 
 这个一个还原游戏《绝区零》中 H.D.D (Hollow Deep Dive System) 的一段基于 PyQt5 的 Python GUI 程序。
 
-![Logo](https://i.postimg.cc/4yfbFfGC/H-D-D.png)
+![Logo](H.D.D.png)
 
 ## 使用方法
 
