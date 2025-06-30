@@ -100,6 +100,10 @@ jobs:
           
           # 使用spec文件构建
           pyinstaller H.D.D_system.spec
+          
+          # 检查构建产物
+          echo "构建产物列表:"
+          ls -la dist/
         env:
           PYTHONPATH: ${{ github.workspace }}
           
