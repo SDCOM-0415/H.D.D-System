@@ -190,7 +190,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch='x86_64'," >> hdd_system_mac.spec
+          echo "          target_arch=None," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -211,8 +211,7 @@ jobs:
           echo "                'NSRequiresAquaSystemAppearance': 'False'," >> hdd_system_mac.spec
           echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
           echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_mac.spec
-          echo "                'CFBundleName': 'HDD-System'," >> hdd_system_mac.spec
-          echo "             cipher=block_cipher)" >> hdd_system_mac.spec
+          echo "                'CFBundleName': 'HDD-System'" >> hdd_system_mac.spec
           echo "             })" >> hdd_system_mac.spec
           
           # 使用spec文件构建
@@ -220,17 +219,6 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-
-      - name: Verify Universal Binary
-        run: |
-          echo "检查应用程序架构支持..."
-          lipo -archs "dist/HDD-System.app/Contents/MacOS/HDD-System" || true
-          
-          echo "检查最低系统要求..."
-          plutil -p "dist/HDD-System.app/Contents/Info.plist" | grep LSMinimumSystemVersion || true
-          
-          echo "显示详细文件信息..."
-          file "dist/HDD-System.app/Contents/MacOS/HDD-System"
 
       - name: Create DMG (macOS disk image)
         run: |
@@ -260,7 +248,7 @@ jobs:
             --window-size 600 400 \
             --icon "HDD-System.app" 150 190 \
             --app-drop-link 450 190 \
-            "HDD-System.dmg" \
+            "HDD-System-macOS-x86_64.dmg" \
             "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
           
           # 检查DMG文件是否创建成功
