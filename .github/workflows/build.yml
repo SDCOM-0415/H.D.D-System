@@ -253,7 +253,7 @@ jobs:
           
           # 检查DMG文件是否创建成功
           echo "检查DMG文件..."
-          ls -la HDD-System.dmg
+          ls -la HDD-System-macOS-x86_64.dmg
 
       # 上传macOS DMG到Release
       - name: Upload macOS DMG Release Assets
