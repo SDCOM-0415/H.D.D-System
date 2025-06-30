@@ -95,21 +95,6 @@ jobs:
           echo "          target_arch=None," >> H.D.D_system.spec
           echo "          codesign_identity=None," >> H.D.D_system.spec
           echo "          entitlements_file=None," >> H.D.D_system.spec
-          echo "          icon='Icon.ico')" >> H.D.D_system.spec
-          echo "exe = EXE(pyz," >> H.D.D_system.spec
-          echo "          a.scripts," >> H.D.D_system.spec
-          echo "          []," >> H.D.D_system.spec
-          echo "          exclude_binaries=True," >> H.D.D_system.spec
-          echo "          name='H.D.D-System'," >> H.D.D_system.spec
-          echo "          debug=False," >> H.D.D_system.spec
-          echo "          bootloader_ignore_signals=False," >> H.D.D_system.spec
-          echo "          strip=False," >> H.D.D_system.spec
-          echo "          upx=True," >> H.D.D_system.spec
-          echo "          console=False," >> H.D.D_system.spec
-          echo "          disable_windowed_traceback=False," >> H.D.D_system.spec
-          echo "          target_arch=None," >> H.D.D_system.spec
-          echo "          codesign_identity=None," >> H.D.D_system.spec
-          echo "          entitlements_file=None," >> H.D.D_system.spec
           echo "          icon='Icon.ico'," >> H.D.D_system.spec
           echo "          onefile=True)" >> H.D.D_system.spec
           
