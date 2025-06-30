@@ -167,3 +167,5 @@ osu-beatmap-to-mania-converter.exe
 config.toml
 config.json
 config.yaml
+
+logs_*
