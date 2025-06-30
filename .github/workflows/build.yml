@@ -152,6 +152,9 @@ jobs:
           pip install pyinstaller pillow
           pip install -r requirements.macos.txt
           
+          # 确保安装了支持Universal Binary的依赖
+          pip install packaging
+          
           # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
@@ -187,7 +190,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch=None," >> hdd_system_mac.spec
+          echo "          target_arch='universal2'," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -209,12 +212,25 @@ jobs:
           echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
           echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_mac.spec
           echo "                'CFBundleName': 'HDD-System'," >> hdd_system_mac.spec
+          echo "                'LSMinimumSystemVersion': '11.0'," >> hdd_system_mac.spec
           echo "             })" >> hdd_system_mac.spec
           
           # 使用spec文件构建
           pyinstaller hdd_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+
+      - name: Verify Universal Binary
+        run: |
+          echo "检查应用程序架构支持..."
+          lipo -archs "dist/HDD-System.app/Contents/MacOS/HDD-System" || true
+          
+          echo "检查最低系统要求..."
+          plutil -p "dist/HDD-System.app/Contents/Info.plist" | grep LSMinimumSystemVersion || true
+          
+          echo "显示详细文件信息..."
+          file "dist/HDD-System.app/Contents/MacOS/HDD-System"
 
       - name: Create DMG (macOS disk image)
         run: |
