@@ -96,14 +96,22 @@ jobs:
           echo "          codesign_identity=None," >> H.D.D_system.spec
           echo "          entitlements_file=None," >> H.D.D_system.spec
           echo "          icon='Icon.ico')" >> H.D.D_system.spec
-          echo "coll = COLLECT(exe," >> H.D.D_system.spec
-          echo "               a.binaries," >> H.D.D_system.spec
-          echo "               a.zipfiles," >> H.D.D_system.spec
-          echo "               a.datas," >> H.D.D_system.spec
-          echo "               strip=False," >> H.D.D_system.spec
-          echo "               upx=True," >> H.D.D_system.spec
-          echo "               upx_exclude=[]," >> H.D.D_system.spec
-          echo "               name='H.D.D-System')" >> H.D.D_system.spec
+          echo "exe = EXE(pyz," >> H.D.D_system.spec
+          echo "          a.scripts," >> H.D.D_system.spec
+          echo "          []," >> H.D.D_system.spec
+          echo "          exclude_binaries=True," >> H.D.D_system.spec
+          echo "          name='H.D.D-System'," >> H.D.D_system.spec
+          echo "          debug=False," >> H.D.D_system.spec
+          echo "          bootloader_ignore_signals=False," >> H.D.D_system.spec
+          echo "          strip=False," >> H.D.D_system.spec
+          echo "          upx=True," >> H.D.D_system.spec
+          echo "          console=False," >> H.D.D_system.spec
+          echo "          disable_windowed_traceback=False," >> H.D.D_system.spec
+          echo "          target_arch=None," >> H.D.D_system.spec
+          echo "          codesign_identity=None," >> H.D.D_system.spec
+          echo "          entitlements_file=None," >> H.D.D_system.spec
+          echo "          icon='Icon.ico'," >> H.D.D_system.spec
+          echo "          onefile=True)" >> H.D.D_system.spec
           
           # 使用spec文件构建
           pyinstaller H.D.D_system.spec
@@ -114,7 +122,7 @@ jobs:
       - name: Create ZIP archive
         run: |
           cd dist
-          7z a -tzip H.D.D-System-Windows.zip H.D.D-System/
+          7z a -tzip H.D.D-System-Windows.zip H.D.D-System.exe
       # 上传到Release
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1

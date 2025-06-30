@@ -4,3 +4,4 @@ psutil
 pygame
 pywinstyles
 pywin32
+qfluentwidgets
