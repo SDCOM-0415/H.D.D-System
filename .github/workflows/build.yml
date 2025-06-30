@@ -190,7 +190,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch=None," >> hdd_system_mac.spec
+          echo "          target_arch='x86_64'," >> hdd_system_mac.spec
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -207,6 +207,12 @@ jobs:
           echo "             icon='Icon.icns'," >> hdd_system_mac.spec
           echo "             bundle_identifier=None," >> hdd_system_mac.spec
           echo "             info_plist={" >> hdd_system_mac.spec
+          echo "                'CFBundlePackageType': 'APPL'," >> hdd_system_mac.spec
+          echo "                'CFBundleExecutable': 'HDD-System'," >> hdd_system_mac.spec
+          echo "                'CFBundleIdentifier': 'com.example.HDD-System'," >> hdd_system_mac.spec
+          echo "                'CFBundleVersion': '1.0'," >> hdd_system_mac.spec
+          echo "                'CFBundleShortVersionString': '1.0'," >> hdd_system_mac.spec
+          echo "                'LSMinimumSystemVersion': '10.15'," >> hdd_system_mac.spec
           echo "                'NSHighResolutionCapable': 'True'," >> hdd_system_mac.spec
           echo "                'NSRequiresAquaSystemAppearance': 'False'," >> hdd_system_mac.spec
           echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
