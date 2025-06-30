@@ -40,12 +40,13 @@ jobs:
           git config user.email "actions@github.com"
           git tag ${TAG_NAME}
           git push origin ${TAG_NAME}
+
   build-windows:
     runs-on: windows-latest
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     permissions:
-      contents: write # 添加创建release的权限
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -111,13 +112,11 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
 
-      # 创建zip文件以便上传
       - name: Create ZIP archive
         run: |
           cd dist
           7z a -tzip HDD-System-Windows.zip HDD-System/
 
-      # 上传到Release
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1
         with:
@@ -134,7 +133,7 @@ jobs:
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     permissions:
-      contents: write # 添加创建release的权限
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -142,7 +141,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'  # 使用较新版本以确保Universal2支持
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
 
@@ -160,7 +159,7 @@ jobs:
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
 
-      - name: Build with PyInstaller
+      - name: Build with PyInstaller (Universal2)
         run: |
           # 创建一个临时的spec文件
           echo "# -*- mode: python ; coding: utf-8 -*-" > hdd_system_mac.spec
@@ -190,7 +189,7 @@ jobs:
           echo "          upx=True," >> hdd_system_mac.spec
           echo "          console=False," >> hdd_system_mac.spec
           echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch='x86_64'," >> hdd_system_mac.spec
+          echo "          target_arch='universal2'," >> hdd_system_mac.spec  # 修改为universal2
           echo "          codesign_identity=None," >> hdd_system_mac.spec
           echo "          entitlements_file=None," >> hdd_system_mac.spec
           echo "          icon='Icon.icns')" >> hdd_system_mac.spec
@@ -226,7 +225,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Create DMG (macOS disk image)
+      - name: Create DMG (Universal2)
         run: |
           # 安装create-dmg工具
           brew install create-dmg
@@ -246,7 +245,7 @@ jobs:
           ls -la dmg_contents/
           
           # 创建DMG文件
-          echo "创建DMG文件..."
+          echo "创建Universal2 DMG文件..."
           create-dmg \
             --volname "HDD-System" \
             --volicon "Icon.icns" \
@@ -254,19 +253,18 @@ jobs:
             --window-size 600 400 \
             --icon "HDD-System.app" 150 190 \
             --app-drop-link 450 190 \
-            "HDD-System-macOS-x86_64.dmg" \
+            "HDD-System-macOS-Universal2.dmg" \  # 修改文件名
             "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
           
           # 检查DMG文件是否创建成功
           echo "检查DMG文件..."
-          ls -la HDD-System-macOS-x86_64.dmg
+          ls -la HDD-System-macOS-Universal2.dmg
 
-      # 上传macOS DMG到Release
       - name: Upload macOS DMG Release Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./HDD-System-macOS-x86_64.dmg
+            ./HDD-System-macOS-Universal2.dmg
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
