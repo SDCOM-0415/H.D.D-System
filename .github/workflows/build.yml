@@ -156,6 +156,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install gettext
+        run: |
+          brew install gettext
+          echo "GETTEXT_PATH=$(brew --prefix gettext)" >> $GITHUB_ENV
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -163,6 +168,8 @@ jobs:
           architecture: 'x64'
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
+        env:
+          DYLD_LIBRARY_PATH: ${{ env.GETTEXT_PATH }}/lib
 
       - name: Install dependencies
         run: |
