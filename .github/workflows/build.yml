@@ -160,6 +160,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+          architecture: 'x64'
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
 
@@ -170,13 +171,21 @@ jobs:
           # 显示Python和pip的架构信息
           python -c "import platform; print('Python架构:', platform.machine())"
           
-          # 安装依赖项并指定目标架构
-          echo "安装x86_64架构依赖..."
-          ARCHFLAGS="-arch x86_64" pip install pyinstaller pillow
-          ARCHFLAGS="-arch x86_64" pip install -r requirements.macos.txt
+          # 设置x86_64架构
+          export ARCHFLAGS="-arch x86_64"
+          export SYSTEM_VERSION_COMPAT=1
           
-          # 安装其他必要的包
-          pip install packaging create-dmg
+          # 强制使用x86_64架构
+          echo "强制使用x86_64架构..."
+          arch -x86_64 python -c "import platform; print('强制后Python架构:', platform.machine())"
+      
+          # 安装依赖项并指定目标架构
+              echo "安装x86_64架构依赖..."
+              arch -x86_64 pip install pyinstaller pillow
+              arch -x86_64 pip install -r requirements.macos.txt
+
+              # 安装其他必要的包
+              arch -x86_64 pip install packaging
           
           # 验证关键依赖项的架构
           echo "检查pygame安装..."
