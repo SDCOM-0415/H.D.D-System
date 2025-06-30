@@ -4,10 +4,10 @@ on:
   push:
     branches: [ main, master ]
     tags:
-      - 'v*'
+      - 'v*' # 当推送以v开头的tag时触发
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch:  # 允许手动触发工作流
 
 jobs:
   create-tag:
@@ -25,12 +25,17 @@ jobs:
       - name: Create Tag
         id: create_tag
         run: |
+          # 获取当前日期作为版本号的一部分
           DATE=$(date +'%Y%m%d')
+          # 获取今天已经创建的tag数量
           COUNT=$(git tag -l "v${DATE}.*" | wc -l)
+          # 新的tag编号
           NEW_COUNT=$((COUNT + 1))
+          # 构造新的tag名称
           TAG_NAME="v${DATE}.${NEW_COUNT}"
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           
+          # 创建并推送tag
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git tag ${TAG_NAME}
@@ -48,7 +53,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.9'
           cache: 'pip'
           cache-dependency-path: requirements.windows.txt
 
@@ -123,270 +128,287 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos-arm64:
-    runs-on: macos-latest
+    runs-on: macos-latest-large
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
-    strategy:
     permissions:
-      contents: write
+      contents: write # 添加创建release的权限
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install and link system dependencies
-        run: |
-          brew install gettext
-          brew link --force gettext
-          GETTEXT_PATH=$(brew --prefix gettext)
-          echo "GETTEXT_PATH=${GETTEXT_PATH}" >> $GITHUB_ENV
-          # 创建符号链接到Python期望的路径
-          sudo mkdir -p /usr/local/opt/gettext/lib
-          sudo ln -s ${GETTEXT_PATH}/lib/libintl.8.dylib /usr/local/opt/gettext/lib/
       - name: Set up Python
-        env:
-          DYLD_LIBRARY_PATH: /usr/local/opt/gettext/lib:${{ env.GETTEXT_PATH }}/lib
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: '3.9'
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pillow packaging
+          pip install pyinstaller pillow
           pip install -r requirements.macos.txt
           
+          # 确保安装了支持Universal Binary的依赖
+          pip install packaging
+          
+          # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
-      - name: Build for ${{ matrix.arch }}
+      - name: Build with PyInstaller
         run: |
-          echo "# -*- mode: python ; coding: utf-8 -*-" > H.D.D_system.spec
-          echo "block_cipher = None" >> H.D.D_system.spec
-          echo "a = Analysis(['Main.PY']," >> H.D.D_system.spec
-          echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system.spec
-          echo "             binaries=[]," >> H.D.D_system.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> H.D.D_system.spec
-          echo "             hiddenimports=[]," >> H.D.D_system.spec
-          echo "             hookspath=[]," >> H.D.D_system.spec
-          echo "             runtime_hooks=[]," >> H.D.D_system.spec
-          echo "             excludes=[]," >> H.D.D_system.spec
-          echo "             win_no_prefer_redirects=False," >> H.D.D_system.spec
-          echo "             win_private_assemblies=False," >> H.D.D_system.spec
-          echo "             cipher=block_cipher," >> H.D.D_system.spec
-          echo "             noarchive=False)" >> H.D.D_system.spec
-          echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system.spec
-          echo "             cipher=block_cipher)" >> H.D.D_system.spec
-          echo "exe = EXE(pyz," >> H.D.D_system.spec
-          echo "          a.scripts," >> H.D.D_system.spec
-          echo "          []," >> H.D.D_system.spec
-          echo "          exclude_binaries=True," >> H.D.D_system.spec
-          echo "          name='H.D.D-System'," >> H.D.D_system.spec
-          echo "          debug=False," >> H.D.D_system.spec
-          echo "          bootloader_ignore_signals=False," >> H.D.D_system.spec
-          echo "          strip=False," >> H.D.D_system.spec
-          echo "          upx=True," >> H.D.D_system.spec
-          echo "          console=False," >> H.D.D_system.spec
-          echo "          disable_windowed_traceback=False," >> H.D.D_system.spec
-          echo "          target_arch=' '," >> H.D.D_system.spec
-          echo "          codesign_identity=None," >> H.D.D_system.spec
-          echo "          entitlements_file=None," >> H.D.D_system.spec
-          echo "          icon='Icon.icns')" >> H.D.D_system.spec
-          echo "coll = COLLECT(exe," >> H.D.D_system.spec
-          echo "               a.binaries," >> H.D.D_system.spec
-          echo "               a.zipfiles," >> H.D.D_system.spec
-          echo "               a.datas," >> H.D.D_system.spec
-          echo "               strip=False," >> H.D.D_system.spec
-          echo "               upx=True," >> H.D.D_system.spec
-          echo "               upx_exclude=[]," >> H.D.D_system.spec
-          echo "               name='H.D.D-System')" >> H.D.D_system.spec
-          echo "app = BUNDLE(coll," >> H.D.D_system.spec
-          echo "             name='H.D.D-System.app'," >> H.D.D_system.spec
-          echo "             icon='Icon.icns'," >> H.D.D_system.spec
-          echo "             bundle_identifier=None," >> H.D.D_system.spec
-          echo "             info_plist={" >> H.D.D_system.spec
-          echo "                'CFBundlePackageType': 'APPL'," >> H.D.D_system.spec
-          echo "                'CFBundleExecutable': 'H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleIdentifier': 'com.example.H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleVersion': '1.0'," >> H.D.D_system.spec
-          echo "                'CFBundleShortVersionString': '1.0'," >> H.D.D_system.spec
-          echo "                'LSMinimumSystemVersion': '10.15'," >> H.D.D_system.spec
-          echo "                'NSHighResolutionCapable': 'True'," >> H.D.D_system.spec
-          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> H.D.D_system.spec
-          echo "                'NSPrincipalClass': 'NSApplication'," >> H.D.D_system.spec
-          echo "                'CFBundleDisplayName': 'H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleName': 'H.D.D-System'" >> H.D.D_system.spec
-          echo "             })" >> H.D.D_system.spec
+          # 创建一个临时的spec文件
+          echo "# -*- mode: python ; coding: utf-8 -*-" > H.D.D_system_mac.spec
+          echo "block_cipher = None" >> H.D.D_system_mac.spec
+          echo "a = Analysis(['Main.PY']," >> H.D.D_system_mac.spec
+          echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system_mac.spec
+          echo "             binaries=[]," >> H.D.D_system_mac.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> H.D.D_system_mac.spec
+          echo "             hiddenimports=[]," >> H.D.D_system_mac.spec
+          echo "             hookspath=[]," >> H.D.D_system_mac.spec
+          echo "             runtime_hooks=[]," >> H.D.D_system_mac.spec
+          echo "             excludes=[]," >> H.D.D_system_mac.spec
+          echo "             win_no_prefer_redirects=False," >> H.D.D_system_mac.spec
+          echo "             win_private_assemblies=False," >> H.D.D_system_mac.spec
+          echo "             cipher=block_cipher," >> H.D.D_system_mac.spec
+          echo "             noarchive=False)" >> H.D.D_system_mac.spec
+          echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system_mac.spec
+          echo "             cipher=block_cipher)" >> H.D.D_system_mac.spec
+          echo "exe = EXE(pyz," >> H.D.D_system_mac.spec
+          echo "          a.scripts," >> H.D.D_system_mac.spec
+          echo "          []," >> H.D.D_system_mac.spec
+          echo "          exclude_binaries=True," >> H.D.D_system_mac.spec
+          echo "          name='H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "          debug=False," >> H.D.D_system_mac.spec
+          echo "          bootloader_ignore_signals=False," >> H.D.D_system_mac.spec
+          echo "          strip=False," >> H.D.D_system_mac.spec
+          echo "          upx=True," >> H.D.D_system_mac.spec
+          echo "          console=False," >> H.D.D_system_mac.spec
+          echo "          disable_windowed_traceback=False," >> H.D.D_system_mac.spec
+          echo "          target_arch=None," >> H.D.D_system_mac.spec
+          echo "          codesign_identity=None," >> H.D.D_system_mac.spec
+          echo "          entitlements_file=None," >> H.D.D_system_mac.spec
+          echo "          icon='Icon.icns')" >> H.D.D_system_mac.spec
+          echo "coll = COLLECT(exe," >> H.D.D_system_mac.spec
+          echo "               a.binaries," >> H.D.D_system_mac.spec
+          echo "               a.zipfiles," >> H.D.D_system_mac.spec
+          echo "               a.datas," >> H.D.D_system_mac.spec
+          echo "               strip=False," >> H.D.D_system_mac.spec
+          echo "               upx=True," >> H.D.D_system_mac.spec
+          echo "               upx_exclude=[]," >> H.D.D_system_mac.spec
+          echo "               name='H.D.D-System')" >> H.D.D_system_mac.spec
+          echo "app = BUNDLE(coll," >> H.D.D_system_mac.spec
+          echo "             name='H.D.D-System.app'," >> H.D.D_system_mac.spec
+          echo "             icon='Icon.icns'," >> H.D.D_system_mac.spec
+          echo "             bundle_identifier=None," >> H.D.D_system_mac.spec
+          echo "             info_plist={" >> H.D.D_system_mac.spec
+          echo "                'CFBundlePackageType': 'APPL'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleExecutable': 'H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleIdentifier': 'com.example.H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleVersion': '1.0'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleShortVersionString': '1.0'," >> H.D.D_system_mac.spec
+          echo "                'LSMinimumSystemVersion': '10.15'," >> H.D.D_system_mac.spec
+          echo "                'NSHighResolutionCapable': 'True'," >> H.D.D_system_mac.spec
+          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> H.D.D_system_mac.spec
+          echo "                'NSPrincipalClass': 'NSApplication'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleDisplayName': 'H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleName': 'H.D.D-System'" >> H.D.D_system_mac.spec
+          echo "             })" >> H.D.D_system_mac.spec
           
-          # 构建应用
-          pyinstaller H.D.D_system.spec
-          
-          # 重命名输出目录以包含架构信息
-          mv dist/H.D.D-System.app dist/H.D.D-System_arm64.app
+          # 使用spec文件构建
+          pyinstaller H.D.D_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Create DMG
-        run: |  
+      - name: Create DMG (macOS disk image)
+        run: |
+          # 安装create-dmg工具
           brew install create-dmg
           
-          mkdir -p dmg_contents_ 
-          cp -r dist/H.D.D-System_arm64.app dmg_contents_ /
+          # 检查dist目录和.app文件是否存在
+          echo "检查构建产物..."
+          ls -la dist/
           
+          # 创建临时目录
+          mkdir -p dmg_contents
+          
+          # 复制.app到临时目录
+          echo "复制.app到临时目录..."
+          cp -r dist/H.D.D-System.app dmg_contents/ || { echo "复制.app失败"; exit 1; }
+          
+          # 检查.app是否成功复制
+          ls -la dmg_contents/
+          
+          # 创建DMG文件
+          echo "创建DMG文件..."
           create-dmg \
-            --volname "H.D.D-System ( )" \
+            --volname "H.D.D-System" \
             --volicon "Icon.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
-            --icon "H.D.D-System_arm64.app" 150 190 \
+            --icon "H.D.D-System.app" 150 190 \
             --app-drop-link 450 190 \
             "H.D.D-System-macOS-arm64.dmg" \
-            "dmg_contents_ /"
-
+            "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
+          
+          # 检查DMG文件是否创建成功
+          echo "检查DMG文件..."
+          ls -la H.D.D-System-macOS-arm64.dmg
       # 上传macOS DMG到Release
-      - name: Upload macOS DMG Release Asset
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload macOS DMG Release Assets
         uses: softprops/action-gh-release@v1
         with:
-          files: ./H.D.D-System-macOS-arm64.dmg
-          name: Release ${{ github.ref_name }}
+          files: |
+            ./H.D.D-System-macOS-arm64.dmg
+          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}            
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos-x86_64:
     runs-on: macos-latest-large
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     permissions:
-      contents: write
+      contents: write # 添加创建release的权限
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install and link system dependencies
-        run: |
-          brew install gettext
-          brew link --force gettext
-          GETTEXT_PATH=$(brew --prefix gettext)
-          echo "GETTEXT_PATH=${GETTEXT_PATH}" >> $GITHUB_ENV
-          # 创建符号链接到Python期望的路径
-          sudo mkdir -p /usr/local/opt/gettext/lib
-          sudo ln -s ${GETTEXT_PATH}/lib/libintl.8.dylib /usr/local/opt/gettext/lib/
       - name: Set up Python
-        env:
-          DYLD_LIBRARY_PATH: /usr/local/opt/gettext/lib:${{ env.GETTEXT_PATH }}/lib
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: '3.9'
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pillow packaging
+          pip install pyinstaller pillow
           pip install -r requirements.macos.txt
           
+          # 确保安装了支持Universal Binary的依赖
+          pip install packaging
+          
+          # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
-      - name: Build for ${{ matrix.arch }}
-        run: |          
-          echo "# -*- mode: python ; coding: utf-8 -*-" > H.D.D_system.spec
-          echo "block_cipher = None" >> H.D.D_system.spec
-          echo "a = Analysis(['Main.PY']," >> H.D.D_system.spec
-          echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system.spec
-          echo "             binaries=[]," >> H.D.D_system.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> H.D.D_system.spec
-          echo "             hiddenimports=[]," >> H.D.D_system.spec
-          echo "             hookspath=[]," >> H.D.D_system.spec
-          echo "             runtime_hooks=[]," >> H.D.D_system.spec
-          echo "             excludes=[]," >> H.D.D_system.spec
-          echo "             win_no_prefer_redirects=False," >> H.D.D_system.spec
-          echo "             win_private_assemblies=False," >> H.D.D_system.spec
-          echo "             cipher=block_cipher," >> H.D.D_system.spec
-          echo "             noarchive=False)" >> H.D.D_system.spec
-          echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system.spec
-          echo "             cipher=block_cipher)" >> H.D.D_system.spec
-          echo "exe = EXE(pyz," >> H.D.D_system.spec
-          echo "          a.scripts," >> H.D.D_system.spec
-          echo "          []," >> H.D.D_system.spec
-          echo "          exclude_binaries=True," >> H.D.D_system.spec
-          echo "          name='H.D.D-System'," >> H.D.D_system.spec
-          echo "          debug=False," >> H.D.D_system.spec
-          echo "          bootloader_ignore_signals=False," >> H.D.D_system.spec
-          echo "          strip=False," >> H.D.D_system.spec
-          echo "          upx=True," >> H.D.D_system.spec
-          echo "          console=False," >> H.D.D_system.spec
-          echo "          disable_windowed_traceback=False," >> H.D.D_system.spec
-          echo "          target_arch=' '," >> H.D.D_system.spec
-          echo "          codesign_identity=None," >> H.D.D_system.spec
-          echo "          entitlements_file=None," >> H.D.D_system.spec
-          echo "          icon='Icon.icns')" >> H.D.D_system.spec
-          echo "coll = COLLECT(exe," >> H.D.D_system.spec
-          echo "               a.binaries," >> H.D.D_system.spec
-          echo "               a.zipfiles," >> H.D.D_system.spec
-          echo "               a.datas," >> H.D.D_system.spec
-          echo "               strip=False," >> H.D.D_system.spec
-          echo "               upx=True," >> H.D.D_system.spec
-          echo "               upx_exclude=[]," >> H.D.D_system.spec
-          echo "               name='H.D.D-System')" >> H.D.D_system.spec
-          echo "app = BUNDLE(coll," >> H.D.D_system.spec
-          echo "             name='H.D.D-System.app'," >> H.D.D_system.spec
-          echo "             icon='Icon.icns'," >> H.D.D_system.spec
-          echo "             bundle_identifier=None," >> H.D.D_system.spec
-          echo "             info_plist={" >> H.D.D_system.spec
-          echo "                'CFBundlePackageType': 'APPL'," >> H.D.D_system.spec
-          echo "                'CFBundleExecutable': 'H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleIdentifier': 'com.example.H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleVersion': '1.0'," >> H.D.D_system.spec
-          echo "                'CFBundleShortVersionString': '1.0'," >> H.D.D_system.spec
-          echo "                'LSMinimumSystemVersion': '10.15'," >> H.D.D_system.spec
-          echo "                'NSHighResolutionCapable': 'True'," >> H.D.D_system.spec
-          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> H.D.D_system.spec
-          echo "                'NSPrincipalClass': 'NSApplication'," >> H.D.D_system.spec
-          echo "                'CFBundleDisplayName': 'H.D.D-System'," >> H.D.D_system.spec
-          echo "                'CFBundleName': 'H.D.D-System'" >> H.D.D_system.spec
-          echo "             })" >> H.D.D_system.spec
+      - name: Build with PyInstaller
+        run: |
+          # 创建一个临时的spec文件
+          echo "# -*- mode: python ; coding: utf-8 -*-" > H.D.D_system_mac.spec
+          echo "block_cipher = None" >> H.D.D_system_mac.spec
+          echo "a = Analysis(['Main.PY']," >> H.D.D_system_mac.spec
+          echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system_mac.spec
+          echo "             binaries=[]," >> H.D.D_system_mac.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> H.D.D_system_mac.spec
+          echo "             hiddenimports=[]," >> H.D.D_system_mac.spec
+          echo "             hookspath=[]," >> H.D.D_system_mac.spec
+          echo "             runtime_hooks=[]," >> H.D.D_system_mac.spec
+          echo "             excludes=[]," >> H.D.D_system_mac.spec
+          echo "             win_no_prefer_redirects=False," >> H.D.D_system_mac.spec
+          echo "             win_private_assemblies=False," >> H.D.D_system_mac.spec
+          echo "             cipher=block_cipher," >> H.D.D_system_mac.spec
+          echo "             noarchive=False)" >> H.D.D_system_mac.spec
+          echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system_mac.spec
+          echo "             cipher=block_cipher)" >> H.D.D_system_mac.spec
+          echo "exe = EXE(pyz," >> H.D.D_system_mac.spec
+          echo "          a.scripts," >> H.D.D_system_mac.spec
+          echo "          []," >> H.D.D_system_mac.spec
+          echo "          exclude_binaries=True," >> H.D.D_system_mac.spec
+          echo "          name='H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "          debug=False," >> H.D.D_system_mac.spec
+          echo "          bootloader_ignore_signals=False," >> H.D.D_system_mac.spec
+          echo "          strip=False," >> H.D.D_system_mac.spec
+          echo "          upx=True," >> H.D.D_system_mac.spec
+          echo "          console=False," >> H.D.D_system_mac.spec
+          echo "          disable_windowed_traceback=False," >> H.D.D_system_mac.spec
+          echo "          target_arch=None," >> H.D.D_system_mac.spec
+          echo "          codesign_identity=None," >> H.D.D_system_mac.spec
+          echo "          entitlements_file=None," >> H.D.D_system_mac.spec
+          echo "          icon='Icon.icns')" >> H.D.D_system_mac.spec
+          echo "coll = COLLECT(exe," >> H.D.D_system_mac.spec
+          echo "               a.binaries," >> H.D.D_system_mac.spec
+          echo "               a.zipfiles," >> H.D.D_system_mac.spec
+          echo "               a.datas," >> H.D.D_system_mac.spec
+          echo "               strip=False," >> H.D.D_system_mac.spec
+          echo "               upx=True," >> H.D.D_system_mac.spec
+          echo "               upx_exclude=[]," >> H.D.D_system_mac.spec
+          echo "               name='H.D.D-System')" >> H.D.D_system_mac.spec
+          echo "app = BUNDLE(coll," >> H.D.D_system_mac.spec
+          echo "             name='H.D.D-System.app'," >> H.D.D_system_mac.spec
+          echo "             icon='Icon.icns'," >> H.D.D_system_mac.spec
+          echo "             bundle_identifier=None," >> H.D.D_system_mac.spec
+          echo "             info_plist={" >> H.D.D_system_mac.spec
+          echo "                'CFBundlePackageType': 'APPL'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleExecutable': 'H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleIdentifier': 'com.example.H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleVersion': '1.0'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleShortVersionString': '1.0'," >> H.D.D_system_mac.spec
+          echo "                'LSMinimumSystemVersion': '10.15'," >> H.D.D_system_mac.spec
+          echo "                'NSHighResolutionCapable': 'True'," >> H.D.D_system_mac.spec
+          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> H.D.D_system_mac.spec
+          echo "                'NSPrincipalClass': 'NSApplication'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleDisplayName': 'H.D.D-System'," >> H.D.D_system_mac.spec
+          echo "                'CFBundleName': 'H.D.D-System'" >> H.D.D_system_mac.spec
+          echo "             })" >> H.D.D_system_mac.spec
           
-          # 构建应用
-          pyinstaller H.D.D_system.spec
-          
-          # 重命名输出目录以包含架构信息
-          mv dist/H.D.D-System.app dist/H.D.D-System_x86_64.app
+          # 使用spec文件构建
+          pyinstaller H.D.D_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Create DMG
-        run: |          
+      - name: Create DMG (macOS disk image)
+        run: |
+          # 安装create-dmg工具
           brew install create-dmg
           
-          mkdir -p dmg_contents_ 
-          cp -r dist/H.D.D-System_x64.app dmg_contents_ /
+          # 检查dist目录和.app文件是否存在
+          echo "检查构建产物..."
+          ls -la dist/
           
+          # 创建临时目录
+          mkdir -p dmg_contents
+          
+          # 复制.app到临时目录
+          echo "复制.app到临时目录..."
+          cp -r dist/H.D.D-System.app dmg_contents/ || { echo "复制.app失败"; exit 1; }
+          
+          # 检查.app是否成功复制
+          ls -la dmg_contents/
+          
+          # 创建DMG文件
+          echo "创建DMG文件..."
           create-dmg \
-            --volname "H.D.D-System ( )" \
+            --volname "H.D.D-System" \
             --volicon "Icon.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
-            --icon "H.D.D-System_x64.app" 150 190 \
+            --icon "H.D.D-System.app" 150 190 \
             --app-drop-link 450 190 \
-            "H.D.D-System-macOS-x64.dmg" \
-            "dmg_contents_ /"
-
+            "H.D.D-System-macOS-x86_64.dmg" \
+            "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
+          
+          # 检查DMG文件是否创建成功
+          echo "检查DMG文件..."
+          ls -la H.D.D-System-macOS-x86_64.dmg
       # 上传macOS DMG到Release
-      - name: Upload macOS DMG Release Asset
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload macOS DMG Release Assets
         uses: softprops/action-gh-release@v1
         with:
-          files: ./H.D.D-System-macOS-x64.dmg
-          name: Release ${{ github.ref_name }}
+          files: |
+            ./H.D.D-System-macOS-x86_64.dmg
+          name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}        
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
