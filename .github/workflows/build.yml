@@ -4,10 +4,10 @@ on:
   push:
     branches: [ main, master ]
     tags:
-      - 'v*' # 当推送以v开头的tag时触发
+      - 'v*'
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # 允许手动触发工作流
+  workflow_dispatch:
 
 jobs:
   create-tag:
@@ -25,17 +25,12 @@ jobs:
       - name: Create Tag
         id: create_tag
         run: |
-          # 获取当前日期作为版本号的一部分
           DATE=$(date +'%Y%m%d')
-          # 获取今天已经创建的tag数量
           COUNT=$(git tag -l "v${DATE}.*" | wc -l)
-          # 新的tag编号
           NEW_COUNT=$((COUNT + 1))
-          # 构造新的tag名称
           TAG_NAME="v${DATE}.${NEW_COUNT}"
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           
-          # 创建并推送tag
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git tag ${TAG_NAME}
@@ -46,7 +41,7 @@ jobs:
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
     permissions:
-      contents: write
+      contents: write # 添加创建release的权限
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -112,11 +107,13 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
 
+      # 创建zip文件以便上传
       - name: Create ZIP archive
         run: |
           cd dist
           7z a -tzip HDD-System-Windows.zip HDD-System/
 
+      # 上传到Release
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1
         with:
@@ -132,6 +129,9 @@ jobs:
     runs-on: macos-latest
     needs: [create-tag]
     if: always() && (needs.create-tag.result == 'success' || startsWith(github.ref, 'refs/tags/'))
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
     permissions:
       contents: write
     steps:
@@ -141,130 +141,112 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # 使用较新版本以确保Universal2支持
+          python-version: '3.10'
+          architecture: ${{ matrix.arch }}
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pillow
+          pip install pyinstaller pillow packaging
           pip install -r requirements.macos.txt
           
-          # 确保安装了支持Universal Binary的依赖
-          pip install packaging
-          
-          # 使用Pillow将.ico转换为.icns
           mkdir -p icon.iconset
           python -c "from PIL import Image; img = Image.open('Icon.ico'); img.save('icon.iconset/icon_512x512.png', 'PNG')"
           iconutil -c icns icon.iconset -o Icon.icns
 
-      - name: Build with PyInstaller (Universal2)
+      - name: Build for ${{ matrix.arch }}
         run: |
-          # 创建一个临时的spec文件
-          echo "# -*- mode: python ; coding: utf-8 -*-" > hdd_system_mac.spec
-          echo "block_cipher = None" >> hdd_system_mac.spec
-          echo "a = Analysis(['Main.PY']," >> hdd_system_mac.spec
-          echo "             pathex=['${{ github.workspace }}']," >> hdd_system_mac.spec
-          echo "             binaries=[]," >> hdd_system_mac.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> hdd_system_mac.spec
-          echo "             hiddenimports=[]," >> hdd_system_mac.spec
-          echo "             hookspath=[]," >> hdd_system_mac.spec
-          echo "             runtime_hooks=[]," >> hdd_system_mac.spec
-          echo "             excludes=[]," >> hdd_system_mac.spec
-          echo "             win_no_prefer_redirects=False," >> hdd_system_mac.spec
-          echo "             win_private_assemblies=False," >> hdd_system_mac.spec
-          echo "             cipher=block_cipher," >> hdd_system_mac.spec
-          echo "             noarchive=False)" >> hdd_system_mac.spec
-          echo "pyz = PYZ(a.pure, a.zipped_data," >> hdd_system_mac.spec
-          echo "             cipher=block_cipher)" >> hdd_system_mac.spec
-          echo "exe = EXE(pyz," >> hdd_system_mac.spec
-          echo "          a.scripts," >> hdd_system_mac.spec
-          echo "          []," >> hdd_system_mac.spec
-          echo "          exclude_binaries=True," >> hdd_system_mac.spec
-          echo "          name='HDD-System'," >> hdd_system_mac.spec
-          echo "          debug=False," >> hdd_system_mac.spec
-          echo "          bootloader_ignore_signals=False," >> hdd_system_mac.spec
-          echo "          strip=False," >> hdd_system_mac.spec
-          echo "          upx=True," >> hdd_system_mac.spec
-          echo "          console=False," >> hdd_system_mac.spec
-          echo "          disable_windowed_traceback=False," >> hdd_system_mac.spec
-          echo "          target_arch='universal2'," >> hdd_system_mac.spec  # 修改为universal2
-          echo "          codesign_identity=None," >> hdd_system_mac.spec
-          echo "          entitlements_file=None," >> hdd_system_mac.spec
-          echo "          icon='Icon.icns')" >> hdd_system_mac.spec
-          echo "coll = COLLECT(exe," >> hdd_system_mac.spec
-          echo "               a.binaries," >> hdd_system_mac.spec
-          echo "               a.zipfiles," >> hdd_system_mac.spec
-          echo "               a.datas," >> hdd_system_mac.spec
-          echo "               strip=False," >> hdd_system_mac.spec
-          echo "               upx=True," >> hdd_system_mac.spec
-          echo "               upx_exclude=[]," >> hdd_system_mac.spec
-          echo "               name='HDD-System')" >> hdd_system_mac.spec
-          echo "app = BUNDLE(coll," >> hdd_system_mac.spec
-          echo "             name='HDD-System.app'," >> hdd_system_mac.spec
-          echo "             icon='Icon.icns'," >> hdd_system_mac.spec
-          echo "             bundle_identifier=None," >> hdd_system_mac.spec
-          echo "             info_plist={" >> hdd_system_mac.spec
-          echo "                'CFBundlePackageType': 'APPL'," >> hdd_system_mac.spec
-          echo "                'CFBundleExecutable': 'HDD-System'," >> hdd_system_mac.spec
-          echo "                'CFBundleIdentifier': 'com.example.HDD-System'," >> hdd_system_mac.spec
-          echo "                'CFBundleVersion': '1.0'," >> hdd_system_mac.spec
-          echo "                'CFBundleShortVersionString': '1.0'," >> hdd_system_mac.spec
-          echo "                'LSMinimumSystemVersion': '10.15'," >> hdd_system_mac.spec
-          echo "                'NSHighResolutionCapable': 'True'," >> hdd_system_mac.spec
-          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> hdd_system_mac.spec
-          echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_mac.spec
-          echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_mac.spec
-          echo "                'CFBundleName': 'HDD-System'" >> hdd_system_mac.spec
-          echo "             })" >> hdd_system_mac.spec
+          # 创建架构特定的spec文件
+          echo "# -*- mode: python ; coding: utf-8 -*-" > hdd_system_${{ matrix.arch }}.spec
+          echo "block_cipher = None" >> hdd_system_${{ matrix.arch }}.spec
+          echo "a = Analysis(['Main.PY']," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             pathex=['${{ github.workspace }}']," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             binaries=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.icns', '.')]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             hiddenimports=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             hookspath=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             runtime_hooks=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             excludes=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             win_no_prefer_redirects=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             win_private_assemblies=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             cipher=block_cipher," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             noarchive=False)" >> hdd_system_${{ matrix.arch }}.spec
+          echo "pyz = PYZ(a.pure, a.zipped_data," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             cipher=block_cipher)" >> hdd_system_${{ matrix.arch }}.spec
+          echo "exe = EXE(pyz," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          a.scripts," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          []," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          exclude_binaries=True," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          name='HDD-System'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          debug=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          bootloader_ignore_signals=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          strip=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          upx=True," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          console=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          disable_windowed_traceback=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          target_arch='${{ matrix.arch }}'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          codesign_identity=None," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          entitlements_file=None," >> hdd_system_${{ matrix.arch }}.spec
+          echo "          icon='Icon.icns')" >> hdd_system_${{ matrix.arch }}.spec
+          echo "coll = COLLECT(exe," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               a.binaries," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               a.zipfiles," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               a.datas," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               strip=False," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               upx=True," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               upx_exclude=[]," >> hdd_system_${{ matrix.arch }}.spec
+          echo "               name='HDD-System')" >> hdd_system_${{ matrix.arch }}.spec
+          echo "app = BUNDLE(coll," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             name='HDD-System.app'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             icon='Icon.icns'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             bundle_identifier=None," >> hdd_system_${{ matrix.arch }}.spec
+          echo "             info_plist={" >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundlePackageType': 'APPL'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleExecutable': 'HDD-System'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleIdentifier': 'com.example.HDD-System'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleVersion': '1.0'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleShortVersionString': '1.0'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'LSMinimumSystemVersion': '10.15'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'NSHighResolutionCapable': 'True'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'NSRequiresAquaSystemAppearance': 'False'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'NSPrincipalClass': 'NSApplication'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleDisplayName': 'HDD-System'," >> hdd_system_${{ matrix.arch }}.spec
+          echo "                'CFBundleName': 'HDD-System'" >> hdd_system_${{ matrix.arch }}.spec
+          echo "             })" >> hdd_system_${{ matrix.arch }}.spec
           
-          # 使用spec文件构建
-          pyinstaller hdd_system_mac.spec
+          # 构建应用
+          pyinstaller hdd_system_${{ matrix.arch }}.spec
+          
+          # 重命名输出目录以包含架构信息
+          mv dist/HDD-System.app dist/HDD-System_${{ matrix.arch }}.app
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
 
-      - name: Create DMG (Universal2)
+      - name: Create DMG for ${{ matrix.arch }}
         run: |
-          # 安装create-dmg工具
           brew install create-dmg
           
-          # 检查dist目录和.app文件是否存在
-          echo "检查构建产物..."
-          ls -la dist/
+          mkdir -p dmg_contents_${{ matrix.arch }}
+          cp -r dist/HDD-System_${{ matrix.arch }}.app dmg_contents_${{ matrix.arch }}/
           
-          # 创建临时目录
-          mkdir -p dmg_contents
-          
-          # 复制.app到临时目录
-          echo "复制.app到临时目录..."
-          cp -r dist/HDD-System.app dmg_contents/ || { echo "复制.app失败"; exit 1; }
-          
-          # 检查.app是否成功复制
-          ls -la dmg_contents/
-          
-          # 创建DMG文件
-          echo "创建Universal2 DMG文件..."
           create-dmg \
-            --volname "HDD-System" \
+            --volname "HDD-System (${{ matrix.arch }})" \
             --volicon "Icon.icns" \
             --window-pos 200 120 \
             --window-size 600 400 \
-            --icon "HDD-System.app" 150 190 \
+            --icon "HDD-System_${{ matrix.arch }}.app" 150 190 \
             --app-drop-link 450 190 \
-            "HDD-System-macOS-Universal2.dmg" \  # 修改文件名
-            "dmg_contents/" || { echo "创建DMG失败"; exit 1; }
-          
-          # 检查DMG文件是否创建成功
-          echo "检查DMG文件..."
-          ls -la HDD-System-macOS-Universal2.dmg
+            "HDD-System-macOS-${{ matrix.arch }}.dmg" \
+            "dmg_contents_${{ matrix.arch }}/"
 
-      - name: Upload macOS DMG Release Assets
+      - name: Upload ${{ matrix.arch }} DMG to Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./HDD-System-macOS-Universal2.dmg
+            ./HDD-System-macOS-${{ matrix.arch }}.dmg
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
