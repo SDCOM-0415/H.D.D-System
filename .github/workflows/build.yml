@@ -153,7 +153,7 @@ jobs:
           DYLD_LIBRARY_PATH: /usr/local/opt/gettext/lib:${{ env.GETTEXT_PATH }}/lib
         uses: actions/setup-python@v4
         with:
-          python-version: '3.14'
+          python-version: '3.13'
           architecture: ${{ matrix.arch }}
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
