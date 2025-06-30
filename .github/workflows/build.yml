@@ -139,10 +139,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install and link system dependencies
+        run: |
+          brew install gettext
+          brew link --force gettext
+          GETTEXT_PATH=$(brew --prefix gettext)
+          echo "GETTEXT_PATH=${GETTEXT_PATH}" >> $GITHUB_ENV
+          # 创建符号链接到Python期望的路径
+          sudo mkdir -p /usr/local/opt/gettext/lib
+          sudo ln -s ${GETTEXT_PATH}/lib/libintl.8.dylib /usr/local/opt/gettext/lib/
+
       - name: Set up Python
+        env:
+          DYLD_LIBRARY_PATH: /usr/local/opt/gettext/lib:${{ env.GETTEXT_PATH }}/lib
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.13'
           architecture: ${{ matrix.arch }}
           cache: 'pip'
           cache-dependency-path: requirements.macos.txt
