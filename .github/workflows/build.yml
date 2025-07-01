@@ -70,9 +70,9 @@ jobs:
           echo "a = Analysis(['Main.PY']," >> H.D.D_system.spec
           echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system.spec
           echo "             binaries=[]," >> H.D.D_system.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.')]," >> H.D.D_system.spec
+          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.'), ('*.py', '.')]," >> H.D.D_system.spec
           echo "             collect_all=True," >> H.D.D_system.spec
-          echo "             hiddenimports=[]," >> H.D.D_system.spec
+          echo "             hiddenimports=['sip', 'PyQt5.sip']," >> H.D.D_system.spec
           echo "             hookspath=[]," >> H.D.D_system.spec
           echo "             runtime_hooks=[]," >> H.D.D_system.spec
           echo "             excludes=[]," >> H.D.D_system.spec
