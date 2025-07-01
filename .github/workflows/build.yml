@@ -80,7 +80,6 @@ jobs:
           echo "             win_private_assemblies=False," >> H.D.D_system.spec
           echo "             cipher=block_cipher," >> H.D.D_system.spec
           echo "             noarchive=False," >> H.D.D_system.spec
-          echo "             collect_all=True," >> H.D.D_system.spec
           echo "             upx=True," >> H.D.D_system.spec
           echo "             upx_exclude=[]," >> H.D.D_system.spec
           echo "             strip=False)" >> H.D.D_system.spec
@@ -109,6 +108,8 @@ jobs:
           # 详细检查构建产物
           echo "详细构建产物列表:"
           Get-ChildItem -Path .\dist -Recurse -Force
+          Get-ChildItem -Path .\build -Recurse -Force
+          Get-ChildItem -Path .\build\H.D.D_system -Recurse -Force
           echo "完整目录结构:"
           tree /F
         env:
