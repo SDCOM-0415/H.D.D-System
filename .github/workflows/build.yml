@@ -71,6 +71,7 @@ jobs:
           echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system.spec
           echo "             binaries=[]," >> H.D.D_system.spec
           echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.')]," >> H.D.D_system.spec
+          echo "             collect_all=True," >> H.D.D_system.spec
           echo "             hiddenimports=[]," >> H.D.D_system.spec
           echo "             hookspath=[]," >> H.D.D_system.spec
           echo "             runtime_hooks=[]," >> H.D.D_system.spec
@@ -78,7 +79,11 @@ jobs:
           echo "             win_no_prefer_redirects=False," >> H.D.D_system.spec
           echo "             win_private_assemblies=False," >> H.D.D_system.spec
           echo "             cipher=block_cipher," >> H.D.D_system.spec
-          echo "             noarchive=False)" >> H.D.D_system.spec
+          echo "             noarchive=False," >> H.D.D_system.spec
+          echo "             collect_all=True," >> H.D.D_system.spec
+          echo "             upx=True," >> H.D.D_system.spec
+          echo "             upx_exclude=[]," >> H.D.D_system.spec
+          echo "             strip=False)" >> H.D.D_system.spec
           echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system.spec
           echo "             cipher=block_cipher)" >> H.D.D_system.spec
           echo "exe = EXE(pyz," >> H.D.D_system.spec
