@@ -48,5 +48,6 @@ exe = EXE(
     icon='Icon.ico',
     onefile=True,
     runtime_tmpdir=None,
-    include_python_dll=True
+    include_python_dll=True,
+    python_dll_name='python39.dll'
 )

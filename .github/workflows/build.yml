@@ -62,48 +62,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -r requirements.windows.txt
-      - name: Build with PyInstaller
-        run: |
-          # 创建一个临时的spec文件
-          echo "# -*- mode: python ; coding: utf-8 -*-" > H.D.D_system.spec
-          echo "block_cipher = None" >> H.D.D_system.spec
-          echo "a = Analysis(['Main.PY']," >> H.D.D_system.spec
-          echo "             pathex=['${{ github.workspace }}']," >> H.D.D_system.spec
-          echo "             binaries=[]," >> H.D.D_system.spec
-          echo "             datas=[('*.png', '.'), ('*.mp3', '.'), ('*.wav', '.'), ('*.ttf', '.'), ('Icon.ico', '.'), ('*.py', '.')]," >> H.D.D_system.spec
-          echo "             collect_all=True," >> H.D.D_system.spec
-          echo "             hiddenimports=['sip', 'PyQt5.sip']," >> H.D.D_system.spec
-          echo "             hookspath=[]," >> H.D.D_system.spec
-          echo "             runtime_hooks=[]," >> H.D.D_system.spec
-          echo "             excludes=[]," >> H.D.D_system.spec
-          echo "             win_no_prefer_redirects=False," >> H.D.D_system.spec
-          echo "             win_private_assemblies=False," >> H.D.D_system.spec
-          echo "             cipher=block_cipher," >> H.D.D_system.spec
-          echo "             noarchive=False," >> H.D.D_system.spec
-          echo "             upx=True," >> H.D.D_system.spec
-          echo "             upx_exclude=[]," >> H.D.D_system.spec
-          echo "             strip=False)" >> H.D.D_system.spec
-          echo "pyz = PYZ(a.pure, a.zipped_data," >> H.D.D_system.spec
-          echo "             cipher=block_cipher)" >> H.D.D_system.spec
-          echo "exe = EXE(pyz," >> H.D.D_system.spec
-          echo "          a.scripts," >> H.D.D_system.spec
-          echo "          []," >> H.D.D_system.spec
-          echo "          exclude_binaries=True," >> H.D.D_system.spec
-          echo "          name='H.D.D-System-Windows'," >> H.D.D_system.spec
-          echo "          debug=False," >> H.D.D_system.spec
-          echo "          bootloader_ignore_signals=False," >> H.D.D_system.spec
-          echo "          strip=False," >> H.D.D_system.spec
-          echo "          upx=True," >> H.D.D_system.spec
-          echo "          console=False," >> H.D.D_system.spec
-          echo "          disable_windowed_traceback=False," >> H.D.D_system.spec
-          echo "          target_arch=None," >> H.D.D_system.spec
-          echo "          codesign_identity=None," >> H.D.D_system.spec
-          echo "          entitlements_file=None," >> H.D.D_system.spec
-          echo "          icon='Icon.ico'," >> H.D.D_system.spec
-          echo "          onefile=True," >> H.D.D_system.spec
-          echo "          runtime_tmpdir=None," >> H.D.D_system.spec
-          echo "          include_python_dll=True)" >> H.D.D_system.spec
           
+          # 验证Python安装和DLL可用性
+          echo "验证Python版本和DLL..."
+          python --version
+          python -c "import os; print('Python DLL路径:', os.path.join(os.path.dirname(os.__file__), 'python39.dll'))"
+          python -c "import sys; print('系统路径:', sys.path)"
+          python -c "from PyQt5 import QtWidgets; print('PyQt5导入成功')"
+      - name: Build with PyInstaller
+        run: |          
           # 使用预定义的spec文件构建
           pyinstaller --distpath dist --workpath build H.D.D_system_windows.spec
           
@@ -111,7 +78,7 @@ jobs:
           echo "详细构建产物列表:"
           Get-ChildItem -Path .\dist -Recurse -Force
           Get-ChildItem -Path .\build -Recurse -Force
-          Get-ChildItem -Path .\build\H.D.D_system -Recurse -Force
+          Get-ChildItem -Path .\build\H.D.D_system_windows -Recurse -Force
           echo "完整目录结构:"
           tree /F
         env:
@@ -121,7 +88,7 @@ jobs:
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: ./build/H.D.D_system/H.D.D-System-Windows.exe
+          files: ./build/H.D.D_system_windows/H.D.D-System-Windows.exe
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
