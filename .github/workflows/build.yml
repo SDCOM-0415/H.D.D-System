@@ -103,12 +103,12 @@ jobs:
           echo "          icon='Icon.ico'," >> H.D.D_system.spec
           echo "          onefile=True)" >> H.D.D_system.spec
           
-          # 使用spec文件构建
-          pyinstaller H.D.D_system.spec
+          # 使用spec文件构建，明确指定输出目录
+          pyinstaller --distpath dist --workpath build H.D.D_system.spec
           
           # 详细检查构建产物
           echo "详细构建产物列表:"
-          Get-ChildItem -Path .\build -Recurse -Force
+          Get-ChildItem -Path .\dist -Recurse -Force
           echo "完整目录结构:"
           tree /F
         env:
@@ -118,7 +118,7 @@ jobs:
       - name: Upload Windows Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: ./build/H.D.D_system/H.D.D-System-Windows.exe
+          files: ./dist/H.D.D-System-Windows.exe
           name: Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || needs.create-tag.outputs.tag_name }}
           draft: false
@@ -216,8 +216,8 @@ jobs:
           echo "                'CFBundleName': 'H.D.D-System'" >> H.D.D_system_mac.spec
           echo "             })" >> H.D.D_system_mac.spec
           
-          # 使用spec文件构建
-          pyinstaller H.D.D_system_mac.spec
+          # 使用spec文件构建，明确指定输出目录
+          pyinstaller --distpath dist --workpath build H.D.D_system_mac.spec
         env:
           PYTHONPATH: ${{ github.workspace }}
           MACOSX_DEPLOYMENT_TARGET: "11.0"
