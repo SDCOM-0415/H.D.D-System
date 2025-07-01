@@ -104,8 +104,8 @@ jobs:
           echo "          runtime_tmpdir=None," >> H.D.D_system.spec
           echo "          include_python_dll=True)" >> H.D.D_system.spec
           
-          # 使用spec文件构建，明确指定输出目录
-          pyinstaller --distpath dist --workpath build H.D.D_system.spec
+          # 使用预定义的spec文件构建
+          pyinstaller --distpath dist --workpath build H.D.D_system_windows.spec
           
           # 详细检查构建产物
           echo "详细构建产物列表:"
