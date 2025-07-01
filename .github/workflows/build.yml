@@ -64,11 +64,16 @@ jobs:
           pip install -r requirements.windows.txt
           
           # 验证Python安装和DLL可用性
-          echo "验证Python版本和DLL..."
-          python --version
-          python -c "import os; print('Python DLL路径:', os.path.join(os.path.dirname(os.__file__), 'python39.dll'))"
-          python -c "import sys; print('系统路径:', sys.path)"
-          python -c "from PyQt5 import QtWidgets; print('PyQt5导入成功')"
+          echo "验证Python安装..."
+          python --version || exit 1
+          
+          echo "检查Python DLL..."
+          python -c "import os; dll_path = os.path.join(os.path.dirname(os.__file__), 'python39.dll'); print(f'Python DLL路径: {dll_path}'); exit(0 if os.path.exists(dll_path) else 1)" || exit 1
+          
+          echo "验证PyQt5导入..."
+          python -c "from PyQt5 import QtWidgets; print('PyQt5导入成功')" || exit 1
+          
+          echo "所有验证步骤完成"
       - name: Build with PyInstaller
         run: |          
           # 使用预定义的spec文件构建
