@@ -100,7 +100,9 @@ jobs:
           echo "          codesign_identity=None," >> H.D.D_system.spec
           echo "          entitlements_file=None," >> H.D.D_system.spec
           echo "          icon='Icon.ico'," >> H.D.D_system.spec
-          echo "          onefile=True)" >> H.D.D_system.spec
+          echo "          onefile=True," >> H.D.D_system.spec
+          echo "          runtime_tmpdir=None," >> H.D.D_system.spec
+          echo "          append_pkg=False)" >> H.D.D_system.spec
           
           # 使用spec文件构建，明确指定输出目录
           pyinstaller --distpath dist --workpath build H.D.D_system.spec
